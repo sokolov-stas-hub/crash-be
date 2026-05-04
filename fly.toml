@@ -1,0 +1,25 @@
+# fly.toml app configuration file generated for crash-be-stas on 2026-05-04T10:18:57+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'crash-be-stas'
+primary_region = 'fra'
+
+[build]
+
+[deploy]
+  release_command = "npm run migrate:prod"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Crash needs a continuous game loop (5Hz tick + persistent rounds) — never auto-stop.
+  auto_stop_machines = 'off'
+  auto_start_machines = false
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

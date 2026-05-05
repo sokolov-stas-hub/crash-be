@@ -18,8 +18,7 @@ TypeScript · Express · Socket.IO · Postgres (`pg`) · zod · Vitest ·
 | GET | `/api/health` | Liveness (no auth) |
 | GET | `/api/docs` | Swagger UI (no auth) |
 | GET | `/api/balance` | Current balance |
-| GET | `/api/history?limit=20` | Player's bet history |
-| GET | `/api/rounds/recent?limit=20` | Last N crash points |
+| GET | `/api/rounds/recent?limit=20` | Last N crash points (with `tier`) |
 
 WebSocket: `socket.io-client` with `auth: { apiKey: '<your-key>' }`.
 Full event reference at `/api/docs` → "WebSocket events" section.

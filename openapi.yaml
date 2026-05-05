@@ -18,15 +18,20 @@ info:
 
     | Event | Payload |
     |---|---|
-    | `round:state` | `{ phase, roundId, startedAt, endsAt, currentMultiplier, crashPoint, yourBet, playerCount }` |
-    | `round:waiting` | `{ roundId, endsAt, playerCount: 0 }` |
-    | `round:start` | `{ roundId, startedAt, playerCount }` |
+    | `round:state` | `{ phase, roundId, startedAt, endsAt, currentMultiplier, crashPoint, yourBet, players }` |
+    | `round:waiting` | `{ roundId, endsAt, players: [] }` |
+    | `round:start` | `{ roundId, startedAt, players }` |
     | `round:tick` | `{ roundId, multiplier, elapsedMs }` |
-    | `round:crash` | `{ roundId, crashPoint, playerCount }` |
-    | `bet:placed` | `{ betId, roundId, amount, autoCashOutAt, balance }` |
-    | `bet:cashedOut` | `{ betId, multiplier, winAmount, profit, balance }` |
-    | `bet:lost` | `{ betId, crashPoint, balance }` |
-    | `bet:rejected` | `{ reason, message }` |
+    | `round:crash` | `{ roundId, crashPoint, tier, players }` |
+    | `bet:placed` | `{ betId, roundId, amount, autoCashOutAt, balance }` (player-targeted) |
+    | `bet:cashedOut` | `{ betId, multiplier, winAmount, profit, balance }` (player-targeted) |
+    | `bet:lost` | `{ betId, crashPoint, balance }` (player-targeted) |
+    | `bet:rejected` | `{ reason, message }` (player-targeted) |
+    | `players:bet` | `{ username, amount }` (broadcast) |
+    | `players:cashout` | `{ username, multiplier, winAmount }` (broadcast) |
+    | `players:lost` | `{ username, amount }` (broadcast) |
+
+    players arrays contain PublicPlayer objects (see schemas).
 
     ### Client → Server
 
@@ -68,26 +73,20 @@ components:
       properties:
         balance: { type: number }
 
-    HistoryBet:
-      type: object
-      properties:
-        betId: { type: string }
-        roundId: { type: string }
-        amount: { type: number }
-        autoCashOutAt: { type: number, nullable: true }
-        status: { type: string, enum: [placed, cashed_out, lost] }
-        multiplier: { type: number, nullable: true }
-        winAmount: { type: number, nullable: true }
-        profit: { type: number, nullable: true }
-        placedAt: { type: string, format: date-time }
-        settledAt: { type: string, format: date-time, nullable: true }
+    RoundTier:
+      type: string
+      enum: [low, mid, high]
+      description: |
+        Color/severity classification of crashPoint:
+        low (red, < 1.5×), mid (orange, 1.5–3×), high (green, ≥ 3×)
 
-    History:
+    PublicPlayer:
       type: object
       properties:
-        bets:
-          type: array
-          items: { $ref: '#/components/schemas/HistoryBet' }
+        username: { type: string, description: 'Same as the player apiKey' }
+        amount: { type: number }
+        status: { type: string, enum: [placed, cashed_out, lost] }
+        multiplier: { type: number, nullable: true, description: 'Set only when status=cashed_out' }
 
     RecentRound:
       type: object
@@ -95,6 +94,7 @@ components:
         roundId: { type: string }
         crashPoint: { type: number }
         crashedAt: { type: string, format: date-time }
+        tier: { $ref: '#/components/schemas/RoundTier' }
 
     RecentRounds:
       type: object
@@ -126,22 +126,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Balance' }
-
-  /api/history:
-    get:
-      tags: [Player]
-      summary: Bet history
-      security: [{ ApiKey: [] }]
-      parameters:
-        - in: query
-          name: limit
-          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/History' }
 
   /api/rounds/recent:
     get:

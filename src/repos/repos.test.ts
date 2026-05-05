@@ -88,15 +88,24 @@ describe('roundRepo', () => {
     expect(Number(result.rows[0].crash_point)).toBe(2.31);
   });
 
-  it('listRecent returns crashed rounds in reverse chronological order', async () => {
+  it('listRecent returns crashed rounds in reverse chronological order with tier', async () => {
     const r1 = await roundRepo.insertRunning(new Date(Date.now() - 2000), 'a');
     const r2 = await roundRepo.insertRunning(new Date(Date.now() - 1000), 'b');
-    await roundRepo.markCrashed(r1.id, 1.5);
-    await roundRepo.markCrashed(r2.id, 3.0);
+    await roundRepo.markCrashed(r1.id, 1.5);   // mid
+    await roundRepo.markCrashed(r2.id, 3.0);   // high
     const list = await roundRepo.listRecent(10);
     expect(list).toHaveLength(2);
     expect(list[0].crashPoint).toBe(3.0);
+    expect(list[0].tier).toBe('high');
     expect(list[1].crashPoint).toBe(1.5);
+    expect(list[1].tier).toBe('mid');
+  });
+
+  it('listRecent classifies crashPoint < 1.5 as low tier', async () => {
+    const r = await roundRepo.insertRunning(new Date(), 'seed');
+    await roundRepo.markCrashed(r.id, 1.18);
+    const list = await roundRepo.listRecent(10);
+    expect(list[0].tier).toBe('low');
   });
 });
 

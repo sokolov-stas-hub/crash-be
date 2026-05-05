@@ -2,6 +2,7 @@ import { pool } from '../db.js';
 import type { PoolClient } from 'pg';
 import type { RecentRound } from '../types.js';
 import { publicRoundId } from '../types.js';
+import { computeTier } from '../domain/tier.js';
 
 export async function insertRunning(
   startedAt: Date,
@@ -41,9 +42,13 @@ export async function listRecent(limit: number): Promise<RecentRound[]> {
       LIMIT $1`,
     [limit],
   );
-  return r.rows.map(row => ({
-    roundId: publicRoundId(Number(row.id)),
-    crashPoint: Number(row.crash_point),
-    crashedAt: row.crashed_at.toISOString(),
-  }));
+  return r.rows.map(row => {
+    const cp = Number(row.crash_point);
+    return {
+      roundId: publicRoundId(Number(row.id)),
+      crashPoint: cp,
+      crashedAt: row.crashed_at.toISOString(),
+      tier: computeTier(cp),
+    };
+  });
 }

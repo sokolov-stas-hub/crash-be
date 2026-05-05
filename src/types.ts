@@ -109,6 +109,7 @@ export interface RecentRound {
   roundId: string;
   crashPoint: number;
   crashedAt: string;
+  tier: RoundTier;
 }
 
 export interface RecentRoundsResponse {

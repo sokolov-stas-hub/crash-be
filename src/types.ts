@@ -10,6 +10,20 @@ export interface ActiveBet {
   balanceAtPlacement: number;   // used to populate bet:lost.balance
 }
 
+// Recent round color/tier classification.
+//   low:  crashPoint < 1.5    (red)
+//   mid:  1.5 <= crashPoint < 3   (orange)
+//   high: crashPoint >= 3   (green)
+export type RoundTier = 'low' | 'mid' | 'high';
+
+// Public per-player info safe to broadcast (no balance, betId, or profit).
+export interface PublicPlayer {
+  username: string;       // === apiKey
+  amount: number;
+  status: 'placed' | 'cashed_out' | 'lost';
+  multiplier: number | null;  // only set when status === 'cashed_out'
+}
+
 // ── Public WebSocket payloads (client-facing, no apiKey) ──
 export type RejectReason =
   | 'betting_closed'

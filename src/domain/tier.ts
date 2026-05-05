@@ -1,4 +1,4 @@
-export type RoundTier = 'low' | 'mid' | 'high';
+import type { RoundTier } from '../types.js';
 
 export function computeTier(crashPoint: number): RoundTier {
   if (crashPoint < 1.5) return 'low';

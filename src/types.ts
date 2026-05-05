@@ -91,23 +91,6 @@ export interface BalanceResponse {
   balance: number;
 }
 
-export interface HistoryBet {
-  betId: string;
-  roundId: string;
-  amount: number;
-  autoCashOutAt: number | null;
-  status: 'placed' | 'cashed_out' | 'lost';
-  multiplier: number | null;
-  winAmount: number | null;
-  profit: number | null;
-  placedAt: string;
-  settledAt: string | null;
-}
-
-export interface HistoryResponse {
-  bets: HistoryBet[];
-}
-
 export interface RecentRound {
   roundId: string;
   crashPoint: number;

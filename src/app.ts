@@ -3,7 +3,6 @@ import cors from 'cors';
 import { errorHandler } from './middleware/errors.js';
 import { apiKeyMiddleware } from './middleware/apiKey.js';
 import { balanceRouter } from './routes/balance.js';
-import { historyRouter } from './routes/history.js';
 import { recentRouter } from './routes/recent.js';
 import { docsRouter } from './routes/docs.js';
 
@@ -22,7 +21,6 @@ export function createApp() {
   // Auth-required routes
   app.use('/api', apiKeyMiddleware);
   app.use('/api', balanceRouter);
-  app.use('/api', historyRouter);
   app.use('/api', recentRouter);
 
   app.use(errorHandler);

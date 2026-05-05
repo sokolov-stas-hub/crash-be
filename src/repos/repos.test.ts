@@ -176,18 +176,4 @@ describe('betRepo', () => {
     expect(r.rowCount).toBe(0);
   });
 
-  it('listForPlayer returns most recent bets first', async () => {
-    await playerRepo.ensureExists('kim');
-    const round = await roundRepo.insertRunning(new Date(), 'seed');
-    const c = await pool.connect();
-    try {
-      await c.query('BEGIN');
-      await betRepo.insertPlaced(c, round.id, 'kim', 100, null, randomUUID());
-      await c.query('COMMIT');
-    } finally { c.release(); }
-    const list = await betRepo.listForPlayer('kim', 10);
-    expect(list).toHaveLength(1);
-    expect(list[0].apiKey).toBe('kim');
-    expect(list[0].amount).toBe(100);
-  });
 });

@@ -78,6 +78,7 @@ describe('Engine', () => {
     for (const name of [
       'phase:waiting', 'phase:running', 'phase:crashed', 'tick',
       'bet:placed', 'bet:cashedOut', 'bet:lost', 'bet:rejected',
+      'players:bet', 'players:cashout', 'players:lost',
     ]) {
       engine.on(name, payload => events.push({ name, payload }));
     }
@@ -96,6 +97,9 @@ describe('Engine', () => {
     expect(placed).toBeDefined();
     expect(placed!.payload).toMatchObject({ apiKey: 'alice', amount: 100, balance: 900 });
     expect(placed!.payload).toMatchObject({ roundId: 'round_1' });
+    const playersBet = events.find(e => e.name === 'players:bet');
+    expect(playersBet).toBeDefined();
+    expect(playersBet!.payload).toEqual({ username: 'alice', amount: 100 });
   });
 
   it('placeBet rejects a second bet from the same player', async () => {
@@ -133,6 +137,9 @@ describe('Engine', () => {
     expect(p.multiplier).toBeGreaterThan(1.3);
     expect(p.multiplier).toBeLessThan(1.4);
     expect(p.winAmount).toBeCloseTo(100 * p.multiplier, 2);
+    const playersCash = events.find(e => e.name === 'players:cashout');
+    expect(playersCash).toBeDefined();
+    expect((playersCash!.payload as { username: string }).username).toBe('alice');
   });
 
   it('auto cashout settles on TARGET, not on current tick value', async () => {
@@ -148,6 +155,9 @@ describe('Engine', () => {
     expect(p.winAmount).toBe(150);
     // alice: 1000 starting → 100 bet → 900 placement balance → +150 win = 1050
     expect(p.balance).toBe(1050);
+    const playersCash = events.find(e => e.name === 'players:cashout');
+    expect(playersCash).toBeDefined();
+    expect(playersCash!.payload).toEqual({ username: 'alice', multiplier: 1.5, winAmount: 150 });
   });
 
   it('crash check fires before auto-cashout when both would trigger', async () => {
@@ -175,6 +185,16 @@ describe('Engine', () => {
     expect(lost).toBeDefined();
     const lostPayload = lost!.payload as { balance: number; betId: string };
     expect(lostPayload.balance).toBe(900);   // 1000 starting - 100 bet
+
+    const crashPayload = crash!.payload as { tier: string; players: Array<{ status: string }> };
+    // crashPoint is 1.5 → mid per computeTier (1.5 boundary)
+    expect(crashPayload.tier).toBe('mid');
+    expect(crashPayload.players).toHaveLength(1);
+    expect(crashPayload.players[0].status).toBe('lost');
+
+    const playersLost = events.find(e => e.name === 'players:lost');
+    expect(playersLost).toBeDefined();
+    expect(playersLost!.payload).toEqual({ username: 'alice', amount: 100 });
   });
 
   it('cashout after crash returns bet:rejected reason not_running', async () => {
@@ -198,5 +218,21 @@ describe('Engine', () => {
     const m1 = (ticks[0].payload as { multiplier: number }).multiplier;
     const m2 = (ticks[1].payload as { multiplier: number }).multiplier;
     expect(m2).toBeGreaterThan(m1);
+  });
+
+  it('publicPlayers is cleared on advanceToWaiting', async () => {
+    await engine.placeBet('alice', 100, null);
+    expect(engine.getState().publicPlayers.size).toBe(1);
+    // Trigger transition through running → crashed
+    engine.__setCrashPointForTest(1.5);
+    await engine.advanceToRunning();
+    clock.advance(8000);
+    engine.tick();   // crashes
+    // After crash, publicPlayers still has alice marked 'lost'
+    expect(engine.getState().publicPlayers.size).toBe(1);
+    expect(engine.getState().publicPlayers.get('alice')?.status).toBe('lost');
+    // Now go back to waiting
+    engine.advanceToWaiting();
+    expect(engine.getState().publicPlayers.size).toBe(0);
   });
 });

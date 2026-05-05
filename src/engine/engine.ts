@@ -2,7 +2,8 @@ import { EventEmitter } from 'node:events';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { computeMultiplier, generateCrash } from './multiplier.js';
-import type { ActiveBet, Phase } from '../types.js';
+import { computeTier } from '../domain/tier.js';
+import type { ActiveBet, Phase, PublicPlayer } from '../types.js';
 import { publicRoundId } from '../types.js';
 
 const WAITING_MS = 10_000;
@@ -51,6 +52,7 @@ interface EngineState {
   crashPoint: number | null;
   seed: string;
   bets: Map<string, ActiveBet>;
+  publicPlayers: Map<string, PublicPlayer>;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -75,6 +77,7 @@ export class Engine extends EventEmitter {
       crashPoint: null,
       seed: '',
       bets: new Map(),
+      publicPlayers: new Map(),
     };
   }
 
@@ -129,10 +132,17 @@ export class Engine extends EventEmitter {
       betId, apiKey, amount, autoCashOutAt, placedAt: new Date(this.clock()),
       balanceAtPlacement: balance,
     });
+    this.state.publicPlayers.set(apiKey, {
+      username: apiKey,
+      amount,
+      status: 'placed',
+      multiplier: null,
+    });
     this.emit('bet:placed', {
       apiKey, betId, roundId: publicRoundId(this.state.roundId + 1),
       amount, autoCashOutAt, balance,
     });
+    this.emit('players:bet', { username: apiKey, amount });
   }
 
   async cashout(apiKey: string): Promise<void> {
@@ -152,13 +162,14 @@ export class Engine extends EventEmitter {
   advanceToWaiting(): void {
     this.state.phase = 'waiting';
     this.state.bets.clear();
+    this.state.publicPlayers.clear();
     this.state.startedAt = null;
     this.state.crashPoint = null;
     this.state.multiplier = 1.0;
     const endsAt = new Date(this.clock() + WAITING_MS);
     this.state.endsAt = endsAt;
     const nextRoundIdLabel = publicRoundId(this.state.roundId + 1);  // tentative
-    this.emit('phase:waiting', { roundId: nextRoundIdLabel, endsAt: endsAt.toISOString(), playerCount: 0 });
+    this.emit('phase:waiting', { roundId: nextRoundIdLabel, endsAt: endsAt.toISOString(), players: [] });
     if (this.autoTimers) {
       this.phaseTimer = setTimeout(() => { void this.advanceToRunning(); }, WAITING_MS);
     }
@@ -184,7 +195,7 @@ export class Engine extends EventEmitter {
     this.emit('phase:running', {
       roundId: publicRoundId(this.state.roundId),
       startedAt: this.state.startedAt.toISOString(),
-      playerCount: this.state.bets.size,
+      players: [...this.state.publicPlayers.values()],
     });
     if (this.autoTimers) {
       this.tickInterval = setInterval(() => this.tick(), TICK_MS);
@@ -226,31 +237,40 @@ export class Engine extends EventEmitter {
     const cp = this.state.crashPoint!;
     this.state.multiplier = cp;
     this.state.phase = 'crashed';
-    const roundId = this.state.roundId;
-    const betsSnapshot = [...this.state.bets.values()];
-
-    // Emit events synchronously so callers see them immediately.
+    // Snapshot the bets BEFORE we mutate publicPlayers (we still need to iterate them for bet:lost emits)
+    const remainingBets = [...this.state.bets.values()];
+    // Mark each remaining bet as lost in publicPlayers
+    for (const bet of remainingBets) {
+      const existing = this.state.publicPlayers.get(bet.apiKey);
+      if (existing) {
+        this.state.publicPlayers.set(bet.apiKey, { ...existing, status: 'lost' });
+      }
+    }
     this.emit('phase:crashed', {
-      roundId: publicRoundId(roundId),
+      roundId: publicRoundId(this.state.roundId),
       crashPoint: cp,
-      playerCount: betsSnapshot.length,
+      tier: computeTier(cp),
+      players: [...this.state.publicPlayers.values()],
     });
-    for (const bet of betsSnapshot) {
+    for (const bet of remainingBets) {
       this.emit('bet:lost', {
         apiKey: bet.apiKey, betId: bet.betId, crashPoint: cp, balance: bet.balanceAtPlacement,
       });
+      this.emit('players:lost', {
+        username: bet.apiKey,
+        amount: bet.amount,
+      });
     }
-
     // Persist to DB asynchronously (fire and forget in production).
-    void this.persistCrash(roundId, cp, betsSnapshot);
+    void this.persistCrash(this.state.roundId, cp, remainingBets);
+    if (this.autoTimers) {
+      this.phaseTimer = setTimeout(() => this.advanceToWaiting(), CRASHED_PAUSE_MS);
+    }
   }
 
   private async persistCrash(roundId: number, cp: number, bets: ActiveBet[]): Promise<void> {
     await this.deps.betRepo.settleAllLost(roundId);
     await this.deps.roundRepo.markCrashed(roundId, cp);
-    if (this.autoTimers) {
-      this.phaseTimer = setTimeout(() => this.advanceToWaiting(), CRASHED_PAUSE_MS);
-    }
     // bets are no longer needed for persistence; emit events already
     // happened in beginCrash with balanceAtPlacement (correct value).
     void bets;
@@ -265,9 +285,28 @@ export class Engine extends EventEmitter {
     const winAmount = round2(bet.amount * atMultiplier);
     const profit = round2(winAmount - bet.amount);
     const newBalance = bet.balanceAtPlacement + winAmount;
+    // Update public snapshot
+    const existing = this.state.publicPlayers.get(bet.apiKey);
+    if (existing) {
+      this.state.publicPlayers.set(bet.apiKey, {
+        ...existing,
+        status: 'cashed_out',
+        multiplier: atMultiplier,
+      });
+    }
     // Emit synchronously — balance is computed from in-memory state (exact: balanceAtPlacement + winAmount).
     this.emit('bet:cashedOut', {
-      apiKey: bet.apiKey, betId: bet.betId, multiplier: atMultiplier, winAmount, profit, balance: newBalance,
+      apiKey: bet.apiKey,
+      betId: bet.betId,
+      multiplier: atMultiplier,
+      winAmount,
+      profit,
+      balance: newBalance,
+    });
+    this.emit('players:cashout', {
+      username: bet.apiKey,
+      multiplier: atMultiplier,
+      winAmount,
     });
     // Persist to DB asynchronously.
     void this.persistCashout(bet, atMultiplier, winAmount);
@@ -282,8 +321,22 @@ export class Engine extends EventEmitter {
       await this.deps.betRepo.markCashedOut(c, bet.betId, atMultiplier, winAmount);
       return this.deps.playerRepo.credit(c, bet.apiKey, winAmount);
     });
+    // Update public snapshot
+    const existing = this.state.publicPlayers.get(bet.apiKey);
+    if (existing) {
+      this.state.publicPlayers.set(bet.apiKey, {
+        ...existing,
+        status: 'cashed_out',
+        multiplier: atMultiplier,
+      });
+    }
     this.emit('bet:cashedOut', {
       apiKey: bet.apiKey, betId: bet.betId, multiplier: atMultiplier, winAmount, profit, balance,
+    });
+    this.emit('players:cashout', {
+      username: bet.apiKey,
+      multiplier: atMultiplier,
+      winAmount,
     });
   }
 

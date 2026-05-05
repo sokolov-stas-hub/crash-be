@@ -42,7 +42,7 @@ export function registerSocketHandlers(io: Server, engine: Engine): void {
       yourBet: yourBet
         ? { amount: yourBet.amount, autoCashOutAt: yourBet.autoCashOutAt, status: yourBetStatus }
         : null,
-      playerCount: state.bets.size,
+      players: [...state.publicPlayers.values()],
     };
     socket.emit('round:state', snapshot);
 

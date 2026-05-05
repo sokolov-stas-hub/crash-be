@@ -46,19 +46,19 @@ export interface RoundStateEvent {
     autoCashOutAt: number | null;
     status: 'placed' | 'cashedOut' | 'lost';
   } | null;
-  playerCount: number;
+  players: PublicPlayer[];
 }
 
 export interface RoundWaitingEvent {
   roundId: string;
   endsAt: string;
-  playerCount: 0;
+  players: PublicPlayer[];
 }
 
 export interface RoundStartEvent {
   roundId: string;
   startedAt: string;
-  playerCount: number;
+  players: PublicPlayer[];
 }
 
 export interface RoundTickEvent {
@@ -70,7 +70,24 @@ export interface RoundTickEvent {
 export interface RoundCrashEvent {
   roundId: string;
   crashPoint: number;
-  playerCount: number;
+  tier: RoundTier;
+  players: PublicPlayer[];
+}
+
+export interface PlayersBetEvent {
+  username: string;
+  amount: number;
+}
+
+export interface PlayersCashoutEvent {
+  username: string;
+  multiplier: number;
+  winAmount: number;
+}
+
+export interface PlayersLostEvent {
+  username: string;
+  amount: number;
 }
 
 export interface BetPlacedEvent {

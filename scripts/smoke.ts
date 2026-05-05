@@ -37,6 +37,15 @@ const alice = await connect('smoke-alice');
 const bob = await connect('smoke-bob');
 console.log('connected: alice + bob');
 
+// Spectator: connects but doesn't bet — should still see public players:* events
+const spectator = await connect('smoke-spectator-' + Date.now());
+console.log('spectator connected');
+
+const spectatorEvents: Array<{ name: string; payload: unknown }> = [];
+for (const evt of ['players:bet', 'players:cashout', 'players:lost', 'round:crash']) {
+  spectator.on(evt, (p) => spectatorEvents.push({ name: evt, payload: p }));
+}
+
 // Wait for a fresh waiting phase
 await new Promise<void>(resolve => alice.once('round:waiting', () => resolve()));
 console.log('round:waiting received');
@@ -66,6 +75,20 @@ const bobResult = await Promise.race([
   new Promise(r => bob.once('bet:lost',      e => r({ kind: 'lost',   e }))),
 ]);
 console.log('bob result:', bobResult);
+
+// Wait briefly for the spectator to capture events
+await new Promise(r => setTimeout(r, 500));
+console.log('spectator captured events:');
+for (const e of spectatorEvents) {
+  console.log(`  ${e.name}:`, e.payload);
+}
+const sawCashoutOrLost = spectatorEvents.some(e => e.name === 'players:cashout' || e.name === 'players:lost');
+if (!sawCashoutOrLost) {
+  console.error('SMOKE FAIL: spectator did not see any players:cashout or players:lost event');
+  process.exit(1);
+}
+console.log('spectator saw public events ✓');
+spectator.close();
 
 alice.close();
 bob.close();

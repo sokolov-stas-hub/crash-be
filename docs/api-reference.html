@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Crash Backend · API & WebSocket Reference</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #07080f;
+    padding: 40px 20px;
+    color: #b0b8c8;
+    line-height: 1.65;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto 40px;
+    background: #0e1119;
+    padding: 50px 56px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+    border-radius: 10px;
+    position: relative;
+    border: 1px solid #1a1f2e;
+  }
+
+  .page::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #fbbf24, #22c55e, #3b82f6, #ef4444);
+    border-radius: 10px 10px 0 0;
+  }
+
+  .header { text-align: center; margin-bottom: 36px; padding-bottom: 28px; border-bottom: 1px solid #1a1f2e; }
+
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #fbbf24, #ef4444);
+    color: #fff; padding: 5px 18px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 18px;
+  }
+
+  h1 {
+    font-size: 34px; font-weight: 800; margin-bottom: 10px;
+    background: linear-gradient(135deg, #fbbf24, #22c55e, #3b82f6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle { font-size: 14px; color: #4a5568; margin-bottom: 14px; }
+
+  .prod-url {
+    display: inline-block;
+    background: #052e16; border: 1px solid #14532d;
+    padding: 8px 18px; border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: #4ade80;
+  }
+
+  h2 {
+    font-size: 22px; font-weight: 700; color: #e8ecf2;
+    margin: 44px 0 18px; display: flex; align-items: center; gap: 10px;
+    padding-bottom: 10px; border-bottom: 1px solid #1a1f2e;
+  }
+  h2 .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #fbbf24, #ef4444);
+    color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 16px; font-weight: 600; color: #e8ecf2; margin: 26px 0 12px;
+    padding-left: 12px; border-left: 3px solid #fbbf24;
+  }
+
+  h4 {
+    font-size: 13px; font-weight: 700; color: #fbbf24;
+    text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px;
+  }
+
+  p { margin-bottom: 12px; font-size: 14px; color: #7a8599; }
+  ul, ol { margin: 8px 0 16px 24px; font-size: 14px; color: #7a8599; }
+  li { margin-bottom: 6px; }
+  strong { color: #e8ecf2; }
+
+  code {
+    background: #161b27; padding: 2px 7px; border-radius: 4px;
+    font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #fbbf24;
+    border: 1px solid #1e2536;
+  }
+
+  pre {
+    background: #0a0e17; border: 1px solid #1a1f2e; border-radius: 8px;
+    padding: 18px 22px; margin: 12px 0 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.65;
+    color: #b0b8c8; overflow-x: auto;
+  }
+  pre .k { color: #60a5fa; }
+  pre .s { color: #4ade80; }
+  pre .n { color: #fbbf24; }
+  pre .b { color: #c084fc; }
+  pre .c { color: #4a5568; font-style: italic; }
+  pre .kw { color: #c084fc; }
+  pre .fn { color: #fbbf24; }
+  pre .t { color: #60a5fa; }
+  pre .str { color: #4ade80; }
+
+  .box { padding: 14px 18px; border-radius: 8px; margin: 14px 0; font-size: 13.5px; border: 1px solid; }
+  .box-green { background: #071a0e; border-color: #14532d; }
+  .box-green strong { color: #4ade80; }
+  .box-red { background: #1a0808; border-color: #7f1d1d; }
+  .box-red strong { color: #f87171; }
+  .box-blue { background: #070f1a; border-color: #1e3a5f; }
+  .box-blue strong { color: #60a5fa; }
+  .box-purple { background: #0f071a; border-color: #3b0764; }
+  .box-purple strong { color: #c084fc; }
+  .box-orange { background: #1a1006; border-color: #78350f; }
+  .box-orange strong { color: #fbbf24; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 20px; }
+  th {
+    background: #141926; font-weight: 600; text-align: left;
+    padding: 10px 14px; border-bottom: 2px solid #1a1f2e; color: #e8ecf2; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid #1a1f2e; color: #7a8599; vertical-align: top; }
+  td code { font-size: 11.5px; }
+
+  .endpoint {
+    background: #111620; border: 1px solid #1a1f2e; border-radius: 10px;
+    padding: 22px 26px; margin: 16px 0 22px;
+  }
+  .endpoint-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .ep-method {
+    display: inline-block; padding: 3px 10px; border-radius: 4px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .ep-get { background: #052e16; color: #4ade80; }
+  .ep-post { background: #172554; color: #60a5fa; }
+  .ws-s2c { background: #2e1065; color: #c084fc; }
+  .ws-c2s { background: #052e16; color: #4ade80; }
+  .ep-url { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #e8ecf2; font-weight: 600; }
+  .ep-when { font-size: 13px; color: #fbbf24; margin-top: 4px; }
+
+  .nav-toc {
+    background: #111620; border: 1px solid #1a1f2e; border-radius: 10px;
+    padding: 18px 22px; margin: 20px 0 30px;
+  }
+  .nav-toc h4 {
+    margin: 0 0 8px;
+  }
+  .nav-toc ul { margin: 0 0 0 18px; }
+  .nav-toc a { color: #7a8599; text-decoration: none; font-size: 13px; }
+  .nav-toc a:hover { color: #4ade80; }
+
+  .footer {
+    text-align: center; padding-top: 24px; margin-top: 32px;
+    border-top: 1px solid #1a1f2e; font-size: 12px; color: #3a4050;
+  }
+  .footer a { color: #60a5fa; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  hr { border: none; border-top: 1px solid #1a1f2e; margin: 30px 0; }
+
+  @media print {
+    body { background: #fff; color: #1f2937; }
+    .page { box-shadow: none; background: #fff; border: 1px solid #e5e7eb; }
+    h1 { -webkit-text-fill-color: #111827; }
+    h2, h3, h4, strong { color: #111827; }
+    p, li, td { color: #374151; }
+    pre { background: #f3f4f6; color: #111827; border-color: #e5e7eb; }
+    pre .k, pre .s, pre .n, pre .b, pre .c, pre .kw, pre .fn, pre .t, pre .str { color: #111827; }
+    code { background: #f3f4f6; color: #111827; border-color: #e5e7eb; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div class="badge">Backend Reference</div>
+    <h1>🚀 Crash Backend API</h1>
+    <p class="subtitle">REST + WebSocket contract · приклади на Vite + React + TS + Zustand + React Query + socket.io-client</p>
+    <div class="prod-url">https://crash-be-stas.fly.dev</div>
+  </div>
+
+  <div class="nav-toc">
+    <h4>Зміст</h4>
+    <ul>
+      <li><a href="#setup">📦 Setup — apiClient + socket singleton + types</a></li>
+      <li><a href="#rest">🌐 REST endpoints (4)</a></li>
+      <li><a href="#s2c">📡 WebSocket Server → Client (9 events)</a></li>
+      <li><a href="#c2s">📤 WebSocket Client → Server (2 events)</a></li>
+      <li><a href="#rules">🧠 Загальні правила</a></li>
+      <li><a href="#cheat">📋 Шпаргалка</a></li>
+    </ul>
+  </div>
+
+  <h2 id="setup"><span class="n">0</span> Setup — фундамент</h2>
+
+  <p>На цьому стеку (<code>Vite + React + TS + Zustand + React Query + socket.io-client</code>) завжди робимо три речі першими: <strong>централізований fetch wrapper</strong>, <strong>один socket на весь застосунок</strong>, <strong>типи з контракту бекенду</strong>.</p>
+
+  <h3>0.1 <code>src/lib/apiClient.ts</code></h3>
+  <pre><span class="kw">import</span> { useAuthStore } <span class="kw">from</span> <span class="str">'@/stores/auth'</span>;
+
+<span class="kw">const</span> BASE = import.meta.env.<span class="t">VITE_API_URL</span>; <span class="c">// https://crash-be-stas.fly.dev</span>
+
+<span class="kw">export async function</span> <span class="fn">api</span>&lt;<span class="t">T</span>&gt;(path: <span class="t">string</span>, init?: <span class="t">RequestInit</span>): <span class="t">Promise</span>&lt;<span class="t">T</span>&gt; {
+  <span class="kw">const</span> apiKey = useAuthStore.getState().apiKey;
+  <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`${BASE}${path}`</span>, {
+    ...init,
+    <span class="k">headers</span>: {
+      <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+      <span class="str">'X-API-Key'</span>: apiKey ?? <span class="str">''</span>,
+      ...init?.headers,
+    },
+  });
+  <span class="kw">if</span> (res.status === <span class="n">401</span>) {
+    useAuthStore.getState().logout();
+    <span class="kw">throw new</span> <span class="t">Error</span>(<span class="str">'UNAUTHORIZED'</span>);
+  }
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">const</span> { error } = <span class="kw">await</span> res.json().catch(() =&gt; ({ <span class="k">error</span>: res.statusText }));
+    <span class="kw">throw new</span> <span class="t">Error</span>(error);
+  }
+  <span class="kw">return</span> res.json();
+}</pre>
+
+  <h3>0.2 <code>src/lib/socket.ts</code></h3>
+  <pre><span class="kw">import</span> { io, <span class="t">Socket</span> } <span class="kw">from</span> <span class="str">'socket.io-client'</span>;
+<span class="kw">import</span> { useAuthStore } <span class="kw">from</span> <span class="str">'@/stores/auth'</span>;
+
+<span class="kw">let</span> socket: <span class="t">Socket</span> | <span class="kw">null</span> = <span class="kw">null</span>;
+
+<span class="kw">export function</span> <span class="fn">getSocket</span>(): <span class="t">Socket</span> {
+  <span class="kw">if</span> (socket) <span class="kw">return</span> socket;
+  <span class="kw">const</span> apiKey = useAuthStore.getState().apiKey;
+  <span class="kw">if</span> (!apiKey) <span class="kw">throw new</span> <span class="t">Error</span>(<span class="str">'Cannot connect WS without apiKey'</span>);
+  socket = io(import.meta.env.<span class="t">VITE_WS_URL</span>, { <span class="k">auth</span>: { apiKey } });
+  <span class="kw">return</span> socket;
+}
+
+<span class="kw">export function</span> <span class="fn">disconnectSocket</span>() {
+  socket?.disconnect();
+  socket = <span class="kw">null</span>;
+}</pre>
+
+  <h3>0.3 <code>src/types/events.ts</code></h3>
+  <pre><span class="kw">export type</span> <span class="t">Phase</span> = <span class="str">'waiting'</span> | <span class="str">'running'</span> | <span class="str">'crashed'</span>;
+
+<span class="kw">export interface</span> <span class="t">RoundStateEvent</span> {
+  <span class="k">phase</span>: <span class="t">Phase</span>;
+  <span class="k">roundId</span>: <span class="t">string</span>;
+  <span class="k">startedAt</span>: <span class="t">string</span> | <span class="kw">null</span>;
+  <span class="k">endsAt</span>: <span class="t">string</span> | <span class="kw">null</span>;
+  <span class="k">currentMultiplier</span>: <span class="t">number</span>;
+  <span class="k">crashPoint</span>: <span class="t">number</span> | <span class="kw">null</span>;
+  <span class="k">yourBet</span>: { <span class="k">amount</span>: <span class="t">number</span>; <span class="k">autoCashOutAt</span>: <span class="t">number</span> | <span class="kw">null</span>; <span class="k">status</span>: <span class="str">'placed'</span> | <span class="str">'cashedOut'</span> | <span class="str">'lost'</span> } | <span class="kw">null</span>;
+  <span class="k">playerCount</span>: <span class="t">number</span>;
+}
+<span class="c">// ... (решта event types у відповідних секціях нижче)</span></pre>
+
+  <hr/>
+
+  <h2 id="rest"><span class="n">1</span> REST endpoints</h2>
+
+  <!-- 1.1 health -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ep-get">GET</span>
+      <span class="ep-url">/api/health</span>
+    </div>
+    <p class="ep-when">⏰ Коли викликати: ніколи з frontend в normal flow. Це для моніторингу / Fly health checks.</p>
+    <p><strong>Auth:</strong> не потрібен.</p>
+    <p><strong>Response:</strong> <code>{ "ok": true }</code> з 200.</p>
+
+    <h4>Приклад (опціонально, якщо хочеш "Server status" індикатор):</h4>
+    <pre><span class="kw">const</span> { data } = useQuery({
+  <span class="k">queryKey</span>: [<span class="str">'health'</span>],
+  <span class="k">queryFn</span>: () =&gt; <span class="fn">api</span>&lt;{ <span class="k">ok</span>: <span class="t">boolean</span> }&gt;(<span class="str">'/api/health'</span>),
+  <span class="k">refetchInterval</span>: <span class="n">30_000</span>,
+});</pre>
+  </div>
+
+  <!-- 1.2 balance -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ep-get">GET</span>
+      <span class="ep-url">/api/balance</span>
+    </div>
+    <p class="ep-when">⏰ Коли викликати: ОДИН РАЗ при старті застосунку, після того як юзер ввів API Key. Далі баланс оновлюється з WS-подій (<code>bet:placed.balance</code>, <code>bet:cashedOut.balance</code>, <code>bet:lost.balance</code>) — не робити refetch після кожного раунду.</p>
+    <p><strong>Auth:</strong> <code>X-API-Key</code> обов'язково. Без нього → 401.</p>
+    <p><strong>Response:</strong> <code>{ "balance": 10000 }</code></p>
+
+    <h4>Приклад (React Query + Zustand sync):</h4>
+    <pre><span class="c">// src/hooks/useBalance.ts</span>
+<span class="kw">import</span> { useQuery } <span class="kw">from</span> <span class="str">'@tanstack/react-query'</span>;
+<span class="kw">import</span> { api } <span class="kw">from</span> <span class="str">'@/lib/apiClient'</span>;
+<span class="kw">import</span> { useGameStore } <span class="kw">from</span> <span class="str">'@/stores/game'</span>;
+
+<span class="kw">export function</span> <span class="fn">useBalanceInit</span>() {
+  <span class="kw">const</span> setBalance = useGameStore(s =&gt; s.setBalance);
+  <span class="kw">return</span> useQuery({
+    <span class="k">queryKey</span>: [<span class="str">'balance'</span>],
+    <span class="k">queryFn</span>: <span class="kw">async</span> () =&gt; {
+      <span class="kw">const</span> { balance } = <span class="kw">await</span> <span class="fn">api</span>&lt;{ <span class="k">balance</span>: <span class="t">number</span> }&gt;(<span class="str">'/api/balance'</span>);
+      setBalance(balance); <span class="c">// sync to Zustand для real-time updates</span>
+      <span class="kw">return</span> balance;
+    },
+    <span class="k">staleTime</span>: <span class="t">Infinity</span>, <span class="c">// не refetch'имо — оновлюємо з WS</span>
+  });
+}</pre>
+  </div>
+
+  <!-- 1.3 history -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ep-get">GET</span>
+      <span class="ep-url">/api/history?limit=20</span>
+    </div>
+    <p class="ep-when">⏰ Коли викликати: при відкритті панелі історії або при старті. Invalidate (через React Query) після кожного <code>bet:cashedOut</code> чи <code>bet:lost</code>.</p>
+    <p><strong>Auth:</strong> <code>X-API-Key</code>.</p>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  <span class="k">"bets"</span>: [
+    {
+      <span class="k">"betId"</span>: <span class="s">"47ec8efa-bb14-440a-a1dc-87acd98dd506"</span>,
+      <span class="k">"roundId"</span>: <span class="s">"round_24"</span>,
+      <span class="k">"amount"</span>: <span class="n">100</span>,
+      <span class="k">"autoCashOutAt"</span>: <span class="n">1.2</span>,
+      <span class="k">"status"</span>: <span class="s">"cashed_out"</span>,
+      <span class="k">"multiplier"</span>: <span class="n">1.2</span>,
+      <span class="k">"winAmount"</span>: <span class="n">120</span>,
+      <span class="k">"profit"</span>: <span class="n">20</span>,
+      <span class="k">"placedAt"</span>: <span class="s">"2026-05-04T07:35:19.413Z"</span>,
+      <span class="k">"settledAt"</span>: <span class="s">"2026-05-04T07:35:22.627Z"</span>
+    }
+  ]
+}</pre>
+    <p><code>status</code> може бути <code>placed</code> | <code>cashed_out</code> | <code>lost</code>. Для <code>placed</code> — <code>multiplier</code> / <code>winAmount</code> / <code>profit</code> / <code>settledAt</code> будуть <code>null</code>.</p>
+
+    <h4>Приклад (з invalidation на WS-подіях):</h4>
+    <pre><span class="c">// src/hooks/useHistory.ts</span>
+<span class="kw">import</span> { useQuery, useQueryClient } <span class="kw">from</span> <span class="str">'@tanstack/react-query'</span>;
+<span class="kw">import</span> { useEffect } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { api } <span class="kw">from</span> <span class="str">'@/lib/apiClient'</span>;
+<span class="kw">import</span> { getSocket } <span class="kw">from</span> <span class="str">'@/lib/socket'</span>;
+
+<span class="kw">export function</span> <span class="fn">useHistory</span>() {
+  <span class="kw">const</span> qc = useQueryClient();
+
+  useEffect(() =&gt; {
+    <span class="kw">const</span> s = getSocket();
+    <span class="kw">const</span> invalidate = () =&gt; qc.invalidateQueries({ <span class="k">queryKey</span>: [<span class="str">'history'</span>] });
+    s.on(<span class="str">'bet:cashedOut'</span>, invalidate);
+    s.on(<span class="str">'bet:lost'</span>, invalidate);
+    <span class="kw">return</span> () =&gt; {
+      s.off(<span class="str">'bet:cashedOut'</span>, invalidate);
+      s.off(<span class="str">'bet:lost'</span>, invalidate);
+    };
+  }, [qc]);
+
+  <span class="kw">return</span> useQuery({
+    <span class="k">queryKey</span>: [<span class="str">'history'</span>],
+    <span class="k">queryFn</span>: () =&gt; <span class="fn">api</span>&lt;{ <span class="k">bets</span>: <span class="t">HistoryBet</span>[] }&gt;(<span class="str">'/api/history?limit=20'</span>),
+  });
+}</pre>
+  </div>
+
+  <!-- 1.4 rounds/recent -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ep-get">GET</span>
+      <span class="ep-url">/api/rounds/recent?limit=20</span>
+    </div>
+    <p class="ep-when">⏰ Коли викликати: при старті — для початкового заповнення стрічки crash points зверху екрану. Далі підтримувати локально через <code>round:crash</code> event.</p>
+    <p><strong>Auth:</strong> <code>X-API-Key</code>.</p>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  <span class="k">"rounds"</span>: [
+    { <span class="k">"roundId"</span>: <span class="s">"round_24"</span>, <span class="k">"crashPoint"</span>: <span class="n">1.20</span>, <span class="k">"crashedAt"</span>: <span class="s">"2026-05-04T07:35:22Z"</span> },
+    { <span class="k">"roundId"</span>: <span class="s">"round_23"</span>, <span class="k">"crashPoint"</span>: <span class="n">10.24</span>, <span class="k">"crashedAt"</span>: <span class="s">"2026-05-04T07:35:04Z"</span> }
+  ]
+}</pre>
+
+    <h4>Приклад (initial load + live append через Zustand):</h4>
+    <pre><span class="c">// src/stores/recent.ts (Zustand)</span>
+<span class="kw">interface</span> <span class="t">RecentState</span> {
+  <span class="k">rounds</span>: <span class="t">Array</span>&lt;{ <span class="k">roundId</span>: <span class="t">string</span>; <span class="k">crashPoint</span>: <span class="t">number</span> }&gt;;
+  <span class="k">setInitial</span>: (rounds: <span class="t">RecentState</span>[<span class="str">'rounds'</span>]) =&gt; <span class="t">void</span>;
+  <span class="k">prepend</span>: (round: { <span class="k">roundId</span>: <span class="t">string</span>; <span class="k">crashPoint</span>: <span class="t">number</span> }) =&gt; <span class="t">void</span>;
+}
+<span class="kw">export const</span> useRecentStore = create&lt;<span class="t">RecentState</span>&gt;(set =&gt; ({
+  <span class="k">rounds</span>: [],
+  <span class="k">setInitial</span>: rounds =&gt; set({ rounds }),
+  <span class="k">prepend</span>: r =&gt; set(s =&gt; ({ <span class="k">rounds</span>: [r, ...s.rounds].slice(<span class="n">0</span>, <span class="n">20</span>) })),
+}));
+
+<span class="c">// у App.tsx</span>
+useEffect(() =&gt; {
+  <span class="fn">api</span>&lt;{ <span class="k">rounds</span>: <span class="t">any</span>[] }&gt;(<span class="str">'/api/rounds/recent?limit=20'</span>)
+    .then(r =&gt; useRecentStore.getState().setInitial(r.rounds));
+  <span class="kw">const</span> s = getSocket();
+  s.on(<span class="str">'round:crash'</span>, (e: { <span class="k">roundId</span>: <span class="t">string</span>; <span class="k">crashPoint</span>: <span class="t">number</span> }) =&gt; {
+    useRecentStore.getState().prepend({ <span class="k">roundId</span>: e.roundId, <span class="k">crashPoint</span>: e.crashPoint });
+  });
+}, []);</pre>
+  </div>
+
+</div>
+
+<div class="page">
+
+  <h2 id="s2c"><span class="n">2</span> WebSocket: Server → Client (9 events)</h2>
+
+  <!-- s2c 1: round:state -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">round:state</span>
+    </div>
+    <p class="ep-when">⏰ Коли: на <code>connect</code> + на reconnect. Це твоя реакція на reconnect — повний snapshot, треба з нього відновити стейт.</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">RoundStateEvent</span> {
+  <span class="k">phase</span>: <span class="str">'waiting'</span> | <span class="str">'running'</span> | <span class="str">'crashed'</span>;
+  <span class="k">roundId</span>: <span class="t">string</span>;            <span class="c">// 'round_24'</span>
+  <span class="k">startedAt</span>: <span class="t">string</span> | <span class="kw">null</span>;   <span class="c">// ISO, тільки для running/crashed</span>
+  <span class="k">endsAt</span>: <span class="t">string</span> | <span class="kw">null</span>;      <span class="c">// ISO, тільки для waiting</span>
+  <span class="k">currentMultiplier</span>: <span class="t">number</span>;  <span class="c">// 1.0 для waiting, поточний для running/crashed</span>
+  <span class="k">crashPoint</span>: <span class="t">number</span> | <span class="kw">null</span>;  <span class="c">// тільки для crashed</span>
+  <span class="k">yourBet</span>: {
+    <span class="k">amount</span>: <span class="t">number</span>;
+    <span class="k">autoCashOutAt</span>: <span class="t">number</span> | <span class="kw">null</span>;
+    <span class="k">status</span>: <span class="str">'placed'</span> | <span class="str">'cashedOut'</span> | <span class="str">'lost'</span>;
+  } | <span class="kw">null</span>;
+  <span class="k">playerCount</span>: <span class="t">number</span>;
+}</pre>
+
+    <h4>Приклад:</h4>
+    <pre><span class="c">// src/hooks/useGameSocket.ts</span>
+<span class="kw">import</span> { useEffect } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { getSocket } <span class="kw">from</span> <span class="str">'@/lib/socket'</span>;
+<span class="kw">import</span> { useGameStore } <span class="kw">from</span> <span class="str">'@/stores/game'</span>;
+
+<span class="kw">export function</span> <span class="fn">useGameSocket</span>() {
+  useEffect(() =&gt; {
+    <span class="kw">const</span> s = getSocket();
+    <span class="kw">const</span> set = useGameStore.getState();
+
+    s.on(<span class="str">'round:state'</span>, (e: <span class="t">RoundStateEvent</span>) =&gt; {
+      <span class="c">// Повний reset — це snapshot</span>
+      set.setPhase(e.phase);
+      set.setRoundId(e.roundId);
+      set.setMultiplier(e.currentMultiplier);
+      set.setStartedAt(e.startedAt ? <span class="kw">new</span> <span class="t">Date</span>(e.startedAt) : <span class="kw">null</span>);
+      set.setEndsAt(e.endsAt ? <span class="kw">new</span> <span class="t">Date</span>(e.endsAt) : <span class="kw">null</span>);
+      set.setCrashPoint(e.crashPoint);
+      set.setMyBet(e.yourBet);
+      set.setPlayerCount(e.playerCount);
+    });
+
+    <span class="kw">return</span> () =&gt; { s.off(<span class="str">'round:state'</span>); };
+  }, []);
+}</pre>
+  </div>
+
+  <!-- s2c 2: round:waiting -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">round:waiting</span>
+    </div>
+    <p class="ep-when">⏰ Коли: перехід у фазу прийому ставок (~10 сек). Це сигнал "відкривай Bet Panel".</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">RoundWaitingEvent</span> {
+  <span class="k">roundId</span>: <span class="t">string</span>;          <span class="c">// round_25 (наступний)</span>
+  <span class="k">endsAt</span>: <span class="t">string</span>;           <span class="c">// ISO — коли закриється вікно ставок</span>
+  <span class="k">playerCount</span>: <span class="n">0</span>;           <span class="c">// завжди 0 на початку waiting</span>
+}</pre>
+
+    <h4>Приклад (з countdown):</h4>
+    <pre>s.on(<span class="str">'round:waiting'</span>, (e: <span class="t">RoundWaitingEvent</span>) =&gt; {
+  useGameStore.getState().setPhase(<span class="str">'waiting'</span>);
+  useGameStore.getState().setRoundId(e.roundId);
+  useGameStore.getState().setEndsAt(<span class="kw">new</span> <span class="t">Date</span>(e.endsAt));
+  useGameStore.getState().setMultiplier(<span class="n">1.0</span>);
+  useGameStore.getState().setMyBet(<span class="kw">null</span>);
+});
+
+<span class="c">// у компоненті:</span>
+<span class="kw">function</span> <span class="fn">Countdown</span>() {
+  <span class="kw">const</span> endsAt = useGameStore(s =&gt; s.endsAt);
+  <span class="kw">const</span> [now, setNow] = useState(<span class="t">Date</span>.now());
+  useEffect(() =&gt; {
+    <span class="kw">const</span> id = setInterval(() =&gt; setNow(<span class="t">Date</span>.now()), <span class="n">100</span>);
+    <span class="kw">return</span> () =&gt; clearInterval(id);
+  }, []);
+  <span class="kw">if</span> (!endsAt) <span class="kw">return null</span>;
+  <span class="kw">const</span> remaining = <span class="t">Math</span>.max(<span class="n">0</span>, <span class="t">Math</span>.ceil((endsAt.getTime() - now) / <span class="n">1000</span>));
+  <span class="kw">return</span> &lt;div&gt;Next round in {remaining}s&lt;/div&gt;;
+}</pre>
+  </div>
+
+  <!-- s2c 3: round:start -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">round:start</span>
+    </div>
+    <p class="ep-when">⏰ Коли: прийом ставок закрито, множник стартує з 1.00×.</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">RoundStartEvent</span> {
+  <span class="k">roundId</span>: <span class="t">string</span>;          <span class="c">// round_25 (зараз цей реально стартує)</span>
+  <span class="k">startedAt</span>: <span class="t">string</span>;        <span class="c">// ISO</span>
+  <span class="k">playerCount</span>: <span class="t">number</span>;      <span class="c">// скільки реально поставили</span>
+}</pre>
+
+    <h4>Приклад:</h4>
+    <pre>s.on(<span class="str">'round:start'</span>, (e: <span class="t">RoundStartEvent</span>) =&gt; {
+  useGameStore.getState().setPhase(<span class="str">'running'</span>);
+  useGameStore.getState().setStartedAt(<span class="kw">new</span> <span class="t">Date</span>(e.startedAt));
+  useGameStore.getState().setEndsAt(<span class="kw">null</span>);
+  useGameStore.getState().setPlayerCount(e.playerCount);
+  useGameStore.getState().setMultiplier(<span class="n">1.0</span>);
+});</pre>
+  </div>
+
+  <!-- s2c 4: round:tick -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">round:tick</span>
+    </div>
+    <p class="ep-when">⏰ Коли: кожні 200мс під час running (5Hz).</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">RoundTickEvent</span> {
+  <span class="k">roundId</span>: <span class="t">string</span>;          <span class="c">// round_25</span>
+  <span class="k">multiplier</span>: <span class="t">number</span>;       <span class="c">// 1.42</span>
+  <span class="k">elapsedMs</span>: <span class="t">number</span>;        <span class="c">// 1230</span>
+}</pre>
+
+    <h4>Приклад (Підхід A — простий):</h4>
+    <pre>s.on(<span class="str">'round:tick'</span>, (e: <span class="t">RoundTickEvent</span>) =&gt; {
+  useGameStore.getState().setMultiplier(e.multiplier);
+});</pre>
+
+    <h4>Приклад (Підхід B — плавно через requestAnimationFrame):</h4>
+    <pre><span class="kw">function</span> <span class="fn">SmoothMultiplier</span>() {
+  <span class="kw">const</span> targetMult = useGameStore(s =&gt; s.multiplier);
+  <span class="kw">const</span> [displayed, setDisplayed] = useState(<span class="n">1</span>);
+  <span class="kw">const</span> targetRef = useRef(targetMult);
+  targetRef.current = targetMult;
+
+  useEffect(() =&gt; {
+    <span class="kw">let</span> raf: <span class="t">number</span>;
+    <span class="kw">const</span> animate = () =&gt; {
+      setDisplayed(prev =&gt; prev + (targetRef.current - prev) * <span class="n">0.2</span>);
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    <span class="kw">return</span> () =&gt; cancelAnimationFrame(raf);
+  }, []);
+
+  <span class="kw">return</span> &lt;div className=<span class="str">"multiplier"</span>&gt;{displayed.toFixed(<span class="n">2</span>)}×&lt;/div&gt;;
+}</pre>
+
+    <div class="box box-red">
+      <strong>⚠️ Важливо:</strong> не показувати displayed multiplier &gt; server multiplier. Бекенд робить <code>Math.floor(m * 100) / 100</code> саме щоб гарантувати "displayed never exceeds true". Якщо інтерполюєш — теж floor'и displayed (а не округлюй).
+    </div>
+  </div>
+
+  <!-- s2c 5: round:crash -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">round:crash</span>
+    </div>
+    <p class="ep-when">⏰ Коли: раунд завершився крашем. Через ~5 сек прийде <code>round:waiting</code> для наступного раунду.</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">RoundCrashEvent</span> {
+  <span class="k">roundId</span>: <span class="t">string</span>;          <span class="c">// round_25</span>
+  <span class="k">crashPoint</span>: <span class="t">number</span>;       <span class="c">// 2.31</span>
+  <span class="k">playerCount</span>: <span class="t">number</span>;      <span class="c">// скільки людей лишилось у раунді на момент крашу</span>
+}</pre>
+
+    <h4>Приклад (з анімацією crash):</h4>
+    <pre>s.on(<span class="str">'round:crash'</span>, (e: <span class="t">RoundCrashEvent</span>) =&gt; {
+  useGameStore.getState().setPhase(<span class="str">'crashed'</span>);
+  useGameStore.getState().setMultiplier(e.crashPoint);
+  useGameStore.getState().setCrashPoint(e.crashPoint);
+  <span class="c">// Прелогінити recent rounds:</span>
+  useRecentStore.getState().prepend({ <span class="k">roundId</span>: e.roundId, <span class="k">crashPoint</span>: e.crashPoint });
+  <span class="c">// Тригер crash-flash анімації:</span>
+  useGameStore.getState().setCrashFlash(<span class="kw">true</span>);
+  setTimeout(() =&gt; useGameStore.getState().setCrashFlash(<span class="kw">false</span>), <span class="n">1500</span>);
+});</pre>
+  </div>
+
+  <!-- s2c 6: bet:placed -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">bet:placed</span>
+    </div>
+    <p class="ep-when">⏰ Коли: після successful <code>bet:place</code> від цього клієнта. Сервер вже списав з балансу.</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">BetPlacedEvent</span> {
+  <span class="k">betId</span>: <span class="t">string</span>;            <span class="c">// UUID — використай для відстеження</span>
+  <span class="k">roundId</span>: <span class="t">string</span>;          <span class="c">// на який раунд ставка</span>
+  <span class="k">amount</span>: <span class="t">number</span>;
+  <span class="k">autoCashOutAt</span>: <span class="t">number</span> | <span class="kw">null</span>;
+  <span class="k">balance</span>: <span class="t">number</span>;          <span class="c">// НОВИЙ баланс (вже після debit)</span>
+}</pre>
+
+    <h4>Приклад:</h4>
+    <pre>s.on(<span class="str">'bet:placed'</span>, (e: <span class="t">BetPlacedEvent</span>) =&gt; {
+  useGameStore.getState().setMyBet({
+    <span class="k">betId</span>: e.betId,
+    <span class="k">amount</span>: e.amount,
+    <span class="k">autoCashOutAt</span>: e.autoCashOutAt,
+    <span class="k">status</span>: <span class="str">'placed'</span>,
+  });
+  useGameStore.getState().setBalance(e.balance); <span class="c">// sync з server</span>
+});</pre>
+  </div>
+
+  <!-- s2c 7: bet:cashedOut -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">bet:cashedOut</span>
+    </div>
+    <p class="ep-when">⏰ Коли: твій manual <code>bet:cashout</code> пройшов АБО auto-cashout target досягнутий. Виграш зарахований.</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">BetCashedOutEvent</span> {
+  <span class="k">betId</span>: <span class="t">string</span>;            <span class="c">// твій bet</span>
+  <span class="k">multiplier</span>: <span class="t">number</span>;       <span class="c">// на якому x вийшов</span>
+  <span class="k">winAmount</span>: <span class="t">number</span>;        <span class="c">// = bet.amount × multiplier</span>
+  <span class="k">profit</span>: <span class="t">number</span>;           <span class="c">// = winAmount - bet.amount</span>
+  <span class="k">balance</span>: <span class="t">number</span>;          <span class="c">// НОВИЙ баланс (вже з виграшем)</span>
+}</pre>
+
+    <h4>Приклад (з UI animation):</h4>
+    <pre>s.on(<span class="str">'bet:cashedOut'</span>, (e: <span class="t">BetCashedOutEvent</span>) =&gt; {
+  useGameStore.getState().setBalance(e.balance);
+  useGameStore.getState().setMyBet(<span class="kw">null</span>);  <span class="c">// ставки більше нема</span>
+  toast.success(<span class="str">`Cashed out @ ${e.multiplier}× → +${e.profit}`</span>);
+  playSound(<span class="str">'cashout'</span>);
+});</pre>
+  </div>
+
+  <!-- s2c 8: bet:lost -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">bet:lost</span>
+    </div>
+    <p class="ep-when">⏰ Коли: ти не встиг кешаут до крашу. Шле за тим самим раундом, після <code>round:crash</code> (або разом з ним).</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">BetLostEvent</span> {
+  <span class="k">betId</span>: <span class="t">string</span>;
+  <span class="k">crashPoint</span>: <span class="t">number</span>;       <span class="c">// на якому x закрашилось</span>
+  <span class="k">balance</span>: <span class="t">number</span>;          <span class="c">// незмінний vs `bet:placed.balance`</span>
+                            <span class="c">// (гроші вже були списані тоді)</span>
+}</pre>
+
+    <h4>Приклад:</h4>
+    <pre>s.on(<span class="str">'bet:lost'</span>, (e: <span class="t">BetLostEvent</span>) =&gt; {
+  useGameStore.getState().setBalance(e.balance);
+  useGameStore.getState().setMyBet(<span class="kw">null</span>);
+  toast.error(<span class="str">`Crashed @ ${e.crashPoint}× — lost ${myBetAmount}`</span>);
+  playSound(<span class="str">'crash'</span>);
+});</pre>
+  </div>
+
+  <!-- s2c 9: bet:rejected -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-s2c">SERVER → CLIENT</span>
+      <span class="ep-url">bet:rejected</span>
+    </div>
+    <p class="ep-when">⏰ Коли: твій <code>bet:place</code> чи <code>bet:cashout</code> не прийнятий.</p>
+
+    <h4>Payload:</h4>
+    <pre><span class="kw">interface</span> <span class="t">BetRejectedEvent</span> {
+  <span class="k">reason</span>: <span class="t">string</span>;
+  <span class="k">message</span>: <span class="t">string</span>;
+}</pre>
+
+    <h4>Можливі <code>reason</code>:</h4>
+    <table>
+      <thead><tr><th>reason</th><th>Коли</th></tr></thead>
+      <tbody>
+        <tr><td><code>betting_closed</code></td><td>пробуєш ставити поза waiting</td></tr>
+        <tr><td><code>already_has_bet</code></td><td>вже є ставка у цьому раунді</td></tr>
+        <tr><td><code>no_active_bet</code></td><td>cashout без активної ставки</td></tr>
+        <tr><td><code>not_running</code></td><td>cashout поза running (зокрема після crash)</td></tr>
+        <tr><td><code>insufficient_balance</code></td><td>мало грошей</td></tr>
+        <tr><td><code>invalid_auto_cashout</code></td><td><code>autoCashOutAt &lt; 1.01</code></td></tr>
+        <tr><td><code>invalid_payload</code></td><td>zod не прийняв формат</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Приклад:</h4>
+    <pre>s.on(<span class="str">'bet:rejected'</span>, (e: <span class="t">BetRejectedEvent</span>) =&gt; {
+  toast.error(e.message);
+  <span class="c">// Звільнити кнопку від loading-state:</span>
+  useGameStore.getState().setActionInFlight(<span class="kw">false</span>);
+});</pre>
+  </div>
+
+</div>
+
+<div class="page">
+
+  <h2 id="c2s"><span class="n">3</span> WebSocket: Client → Server (2 events)</h2>
+
+  <!-- c2s 1: bet:place -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-c2s">CLIENT → SERVER</span>
+      <span class="ep-url">bet:place</span>
+    </div>
+    <p class="ep-when">⏰ Коли: під час <code>phase === 'waiting'</code>, юзер натиснув "Place Bet".</p>
+
+    <h4>Payload:</h4>
+    <pre>{
+  <span class="k">amount</span>: <span class="t">number</span>;                      <span class="c">// &gt; 0, &lt;= 10000</span>
+  <span class="k">autoCashOutAt</span>?: <span class="t">number</span> | <span class="kw">null</span>;       <span class="c">// optional, &gt;= 1.01 якщо число</span>
+}</pre>
+
+    <p><strong>Очікувана відповідь:</strong> або <code>bet:placed</code>, або <code>bet:rejected</code>.</p>
+
+    <h4>Приклад (з loading state):</h4>
+    <pre><span class="kw">async function</span> <span class="fn">handlePlaceBet</span>() {
+  <span class="kw">const</span> { amount, autoTarget, autoEnabled } = useBetFormStore.getState();
+  useGameStore.getState().setActionInFlight(<span class="kw">true</span>);
+  getSocket().emit(<span class="str">'bet:place'</span>, {
+    amount,
+    <span class="k">autoCashOutAt</span>: autoEnabled ? autoTarget : <span class="kw">null</span>,
+  });
+  <span class="c">// Не чекаємо response тут — handler bet:placed/bet:rejected зніме loading</span>
+}
+
+<span class="kw">function</span> <span class="fn">PlaceBetButton</span>() {
+  <span class="kw">const</span> phase = useGameStore(s =&gt; s.phase);
+  <span class="kw">const</span> myBet = useGameStore(s =&gt; s.myBet);
+  <span class="kw">const</span> inFlight = useGameStore(s =&gt; s.actionInFlight);
+
+  <span class="kw">if</span> (phase !== <span class="str">'waiting'</span>) <span class="kw">return</span> &lt;button disabled&gt;Wait for next round&lt;/button&gt;;
+  <span class="kw">if</span> (myBet) <span class="kw">return</span> &lt;button disabled&gt;Bet placed · {myBet.amount}&lt;/button&gt;;
+  <span class="kw">if</span> (inFlight) <span class="kw">return</span> &lt;button disabled&gt;Placing...&lt;/button&gt;;
+  <span class="kw">return</span> &lt;button onClick={handlePlaceBet}&gt;Place Bet&lt;/button&gt;;
+}</pre>
+  </div>
+
+  <!-- c2s 2: bet:cashout -->
+  <div class="endpoint">
+    <div class="endpoint-head">
+      <span class="ep-method ws-c2s">CLIENT → SERVER</span>
+      <span class="ep-url">bet:cashout</span>
+    </div>
+    <p class="ep-when">⏰ Коли: під час <code>phase === 'running'</code> юзер натиснув "Cash Out". <strong>Body порожній</strong> — сервер знає твою активну ставку.</p>
+
+    <h4>Payload:</h4>
+    <pre>{}  <span class="c">// (або взагалі без аргументів)</span></pre>
+
+    <p><strong>Очікувана відповідь:</strong> <code>bet:cashedOut</code> (success), або <code>bet:lost</code> (вже встиг краш — race condition), або <code>bet:rejected</code> з <code>not_running</code>.</p>
+
+    <h4>Приклад:</h4>
+    <pre><span class="kw">async function</span> <span class="fn">handleCashOut</span>() {
+  useGameStore.getState().setActionInFlight(<span class="kw">true</span>);
+  getSocket().emit(<span class="str">'bet:cashout'</span>, {});
+  <span class="c">// bet:cashedOut / bet:lost / bet:rejected handlers знімуть loading</span>
+}
+
+<span class="kw">function</span> <span class="fn">CashOutButton</span>() {
+  <span class="kw">const</span> phase = useGameStore(s =&gt; s.phase);
+  <span class="kw">const</span> myBet = useGameStore(s =&gt; s.myBet);
+  <span class="kw">const</span> multiplier = useGameStore(s =&gt; s.multiplier);
+  <span class="kw">const</span> inFlight = useGameStore(s =&gt; s.actionInFlight);
+
+  <span class="kw">if</span> (!myBet || phase !== <span class="str">'running'</span>) <span class="kw">return null</span>;
+  <span class="kw">const</span> projected = (myBet.amount * multiplier).toFixed(<span class="n">2</span>);
+  <span class="kw">return</span> (
+    &lt;button onClick={handleCashOut} disabled={inFlight} className=<span class="str">"cashout-btn"</span>&gt;
+      {inFlight ? <span class="str">'...'</span> : <span class="str">`Cash Out — ${projected}`</span>}
+    &lt;/button&gt;
+  );
+}</pre>
+  </div>
+
+  <h2 id="rules"><span class="n">4</span> Загальні правила</h2>
+
+  <div class="box box-red">
+    <strong>⚠️ Server is the source of truth.</strong> Не показуй виграш до <code>bet:cashedOut</code>. Не списуй баланс локально до <code>bet:placed</code>. Жодного optimistic update — на відміну від Mines.
+  </div>
+
+  <div class="box box-orange">
+    <strong>⏳ Loading state на in-flight кнопках.</strong> Latency 50–200мс! Якщо не дисейблити кнопку поки летить запит — юзер натисне двічі.
+  </div>
+
+  <div class="box box-blue">
+    <strong>🔄 Reconnect strategy.</strong> Socket.IO робить auto-reconnect з backoff. На <code>connect</code> приходить <code>round:state</code> — з нього повністю повертаєш стейт. Не намагайся "догнати" множник між дисконектом і reconnect.
+  </div>
+
+  <div class="box box-purple">
+    <strong>📦 Out-of-order events.</strong> Перевіряй <code>roundId</code> у tick'ах — якщо приходить tick для НЕ поточного раунду, ігноруй (race condition при перекритті).
+  </div>
+
+  <div class="box box-green">
+    <strong>💰 Balance синхронізуй ВИКЛЮЧНО з WS-подій</strong> після initial <code>/api/balance</code>. Не робити рефетч REST після кожної ставки — баланс є в <code>bet:placed.balance</code>, <code>bet:cashedOut.balance</code>, <code>bet:lost.balance</code>.
+  </div>
+
+  <h2 id="cheat"><span class="n">5</span> Шпаргалка</h2>
+
+  <pre><span class="c">// ═══ Що приходить → куди в Zustand ═══</span>
+<span class="str">'round:state'</span>   →  повний reset стейту з snapshot
+<span class="str">'round:waiting'</span> →  phase=<span class="str">'waiting'</span>, endsAt, roundId, multiplier=<span class="n">1.0</span>, myBet=<span class="kw">null</span>
+<span class="str">'round:start'</span>   →  phase=<span class="str">'running'</span>, startedAt, playerCount, multiplier=<span class="n">1.0</span>
+<span class="str">'round:tick'</span>    →  multiplier (5Hz)
+<span class="str">'round:crash'</span>   →  phase=<span class="str">'crashed'</span>, crashPoint, prepend в recent rounds
+<span class="str">'bet:placed'</span>    →  myBet, balance
+<span class="str">'bet:cashedOut'</span> →  balance, myBet=<span class="kw">null</span>, win toast
+<span class="str">'bet:lost'</span>      →  balance, myBet=<span class="kw">null</span>, loss toast
+<span class="str">'bet:rejected'</span>  →  toast(message), actionInFlight=<span class="kw">false</span>
+
+<span class="c">// ═══ Що шлемо ═══</span>
+<span class="str">'bet:place'</span>     →  { amount, autoCashOutAt? }     <span class="c">(під час waiting)</span>
+<span class="str">'bet:cashout'</span>   →  {}                              <span class="c">(під час running, з активною ставкою)</span>
+
+<span class="c">// ═══ REST ═══</span>
+GET <span class="str">/api/balance</span>          →  один раз при старті, далі sync з WS
+GET <span class="str">/api/history</span>          →  invalidate після bet:cashedOut/lost
+GET <span class="str">/api/rounds/recent</span>   →  один раз при старті, далі prepend з round:crash
+GET <span class="str">/api/health</span>           →  опц., для status indicator
+GET <span class="str">/api/docs</span>             →  Swagger UI (без auth)</pre>
+
+  <div class="footer">
+    <p>🚀 Crash Backend — API & WebSocket Reference</p>
+    <p style="margin-top:6px">Production: <a href="https://crash-be-stas.fly.dev" target="_blank">https://crash-be-stas.fly.dev</a> · Swagger UI: <a href="https://crash-be-stas.fly.dev/api/docs" target="_blank">/api/docs</a></p>
+    <p style="margin-top:6px">Repo: <a href="https://github.com/sokolov-stas-hub/crash-be" target="_blank">github.com/sokolov-stas-hub/crash-be</a></p>
+  </div>
+
+</div>
+
+</body>
+</html>

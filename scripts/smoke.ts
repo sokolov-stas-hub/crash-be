@@ -25,21 +25,41 @@ const port = typeof addr === 'object' && addr ? addr.port : 0;
 const url = `http://localhost:${port}`;
 console.log(`smoke server on ${url}`);
 
-function connect(apiKey: string): Promise<Socket> {
+type ConnectedClient = {
+  socket: Socket;
+  state: {
+    players?: Array<{ username: string; status: string; amount: number; multiplier: number | null }>;
+  };
+};
+
+function connect(apiKey: string): Promise<ConnectedClient> {
   return new Promise((resolve, reject) => {
     const s = ioClient(url, { auth: { apiKey } });
-    s.once('round:state', () => resolve(s));
+    s.once('round:state', (state) => resolve({ socket: s, state }));
     s.once('connect_error', reject);
   });
 }
 
-const alice = await connect('smoke-alice');
-const bob = await connect('smoke-bob');
+const aliceClient = await connect('smoke-alice');
+const bobClient = await connect('smoke-bob');
+const alice = aliceClient.socket;
+const bob = bobClient.socket;
 console.log('connected: alice + bob');
 
 // Spectator: connects but doesn't bet — should still see public players:* events
-const spectator = await connect('smoke-spectator-' + Date.now());
+const spectatorClient = await connect('smoke-spectator-' + Date.now());
+const spectator = spectatorClient.socket;
 console.log('spectator connected');
+
+const spectatorSelf = spectatorClient.state.players?.find(
+  p => p.username.startsWith('smoke-spectator-'),
+);
+if (!spectatorSelf || spectatorSelf.status !== 'watching' || spectatorSelf.amount !== 0) {
+  console.error('SMOKE FAIL: spectator round:state did not include spectator as watching');
+  console.error('spectator round:state players:', spectatorClient.state.players);
+  process.exit(1);
+}
+console.log('spectator saw itself as watching in round:state');
 
 const spectatorEvents: Array<{ name: string; payload: unknown }> = [];
 for (const evt of ['players:bet', 'players:cashout', 'players:lost', 'round:crash']) {
@@ -58,8 +78,20 @@ const bobPlaced = await new Promise<unknown>(r => bob.once('bet:placed', r));
 console.log('bet:placed alice =', alicePlaced);
 console.log('bet:placed bob =', bobPlaced);
 
-await new Promise<void>(r => alice.once('round:start', () => r()));
+const startPayload = await new Promise<{
+  players?: Array<{ username: string; status: string; amount: number; multiplier: number | null }>;
+}>(r => alice.once('round:start', r));
 console.log('round:start received');
+
+const spectatorAtStart = startPayload.players?.find(
+  p => p.username === spectatorSelf.username,
+);
+if (!spectatorAtStart || spectatorAtStart.status !== 'watching' || spectatorAtStart.amount !== 0) {
+  console.error('SMOKE FAIL: round:start did not include spectator as watching');
+  console.error('round:start players:', startPayload.players);
+  process.exit(1);
+}
+console.log('round:start included spectator as watching');
 
 // Alice cashes out manually after 1 second of running
 setTimeout(() => alice.emit('bet:cashout', {}), 1000);

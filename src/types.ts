@@ -20,7 +20,7 @@ export type RoundTier = 'low' | 'mid' | 'high';
 export interface PublicPlayer {
   username: string;       // === apiKey
   amount: number;
-  status: 'placed' | 'cashed_out' | 'lost';
+  status: 'watching' | 'placed' | 'cashed_out' | 'lost';
   multiplier: number | null;  // only set when status === 'cashed_out'
 }
 

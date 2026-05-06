@@ -28,20 +28,29 @@ describe('computeMultiplier', () => {
 });
 
 describe('generateCrash', () => {
+  const seedFrom52BitValue = (value: bigint): string =>
+    value.toString(16).padStart(13, '0').padEnd(64, '0');
+
   it('is deterministic for a given seed', () => {
     const seed = 'a'.repeat(64);
     expect(generateCrash(seed)).toBe(generateCrash(seed));
   });
 
-  it('returns 1.00 for the bottom 1% of the seed space (house edge)', () => {
-    // u < 0.01 ⇒ instant crash. Construct seed where first 13 hex digits give a tiny u.
-    const seed = '0000000000000' + 'f'.repeat(64 - 13);
+  it('returns 1.00 for the bottom 8% of the seed space (92% RTP)', () => {
+    const fivePercentThroughSeedSpace = (1n << 52n) / 20n;
+    const seed = seedFrom52BitValue(fivePercentThroughSeedSpace);
     expect(generateCrash(seed)).toBe(1.0);
+  });
+
+  it('uses the 0.92 RTP factor in the general-formula branch', () => {
+    const halfwayThroughSeedSpace = 1n << 51n; // u = 0.5
+    const seed = seedFrom52BitValue(halfwayThroughSeedSpace);
+    expect(generateCrash(seed)).toBe(1.84);
   });
 
   it('returns >= 1.00 for varied seeds covering the general-formula branch', () => {
     // Use the LCG mixer from the heavy-tail test so seeds spread across the
-    // 52-bit u-space, exercising the general 0.99/(1-u) branch (not just the
+    // 52-bit u-space, exercising the general RTP/(1-u) branch (not just the
     // u<0.01 house-edge early return).
     for (let i = 0; i < 200; i++) {
       const val = (BigInt(i + 1) * 99991n * 6364136223846793005n) % (1n << 52n);
@@ -60,8 +69,8 @@ describe('generateCrash', () => {
       const seed = val.toString(16).padStart(13, '0').padEnd(64, '0');
       if (generateCrash(seed) >= 3.0) high++;
     }
-    // Roughly ~1/3 should be >= 3.0 with our distribution; allow loose bounds.
-    expect(high).toBeGreaterThan(150);
-    expect(high).toBeLessThan(500);
+    // With 92% RTP, P(crash >= 3.0) is about 0.92 / 3 = 30.7%.
+    expect(high).toBeGreaterThan(120);
+    expect(high).toBeLessThan(450);
   });
 });

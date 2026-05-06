@@ -171,6 +171,25 @@ describe('Engine', () => {
     expect(events.find(e => e.name === 'bet:lost')).toBeDefined();
   });
 
+  it('instant crash resolves before cashout can settle at 1.00', async () => {
+    await engine.placeBet('alice', 100, null);
+    engine.__setCrashPointForTest(1.0);
+
+    await engine.advanceToRunning();
+
+    expect(engine.getPhase()).toBe('crashed');
+    expect(events.find(e => e.name === 'phase:running')).toBeDefined();
+    expect(events.find(e => e.name === 'phase:crashed')).toBeDefined();
+    expect(events.find(e => e.name === 'bet:lost')).toBeDefined();
+    expect(events.find(e => e.name === 'bet:cashedOut')).toBeUndefined();
+
+    await engine.cashout('alice');
+
+    expect(events.find(e => e.name === 'bet:cashedOut')).toBeUndefined();
+    const rejected = events.find(e => e.name === 'bet:rejected');
+    expect((rejected!.payload as { reason: string }).reason).toBe('not_running');
+  });
+
   it('crash transitions phase, marks bets lost, broadcasts crashPoint', async () => {
     await engine.placeBet('alice', 100, null);
     engine.__setCrashPointForTest(1.5);

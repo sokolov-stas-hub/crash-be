@@ -197,6 +197,10 @@ export class Engine extends EventEmitter {
       startedAt: this.state.startedAt.toISOString(),
       players: [...this.state.publicPlayers.values()],
     });
+    if (this.state.multiplier >= this.state.crashPoint) {
+      this.beginCrash();
+      return;
+    }
     if (this.autoTimers) {
       this.tickInterval = setInterval(() => this.tick(), TICK_MS);
     }

@@ -1,5 +1,7 @@
 import type { Server } from 'socket.io';
 import { Engine } from '../engine/engine.js';
+import type { PublicPlayer } from '../types.js';
+import { buildSocketPlayersSnapshot } from './players.js';
 import { sockets } from './server.js';
 
 const broadcastEvents = ['round:waiting', 'round:start', 'round:tick', 'round:crash'] as const;
@@ -13,11 +15,24 @@ const engineEventMap: Record<string, string> = {
   'tick': 'round:tick',
 };
 
+function mergePlayersForPhasePayload(payload: unknown): unknown {
+  if (!payload || typeof payload !== 'object' || !('players' in payload)) {
+    return payload;
+  }
+
+  const phasePayload = payload as Record<string, unknown> & { players: PublicPlayer[] };
+  return {
+    ...phasePayload,
+    players: buildSocketPlayersSnapshot(sockets, phasePayload.players),
+  };
+}
+
 export function wireBroadcast(engine: Engine, io: Server): void {
   // Phase / tick events → broadcast (existing)
   for (const engineName of Object.keys(engineEventMap)) {
     engine.on(engineName, (payload) => {
-      io.emit(engineEventMap[engineName], payload);
+      const publicPayload = engineName === 'tick' ? payload : mergePlayersForPhasePayload(payload);
+      io.emit(engineEventMap[engineName], publicPayload);
     });
   }
 

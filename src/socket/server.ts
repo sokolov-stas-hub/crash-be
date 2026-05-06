@@ -4,6 +4,7 @@ import { Engine } from '../engine/engine.js';
 import { registerHandlers } from './handlers.js';
 import { publicRoundId } from '../types.js';
 import type { RoundStateEvent } from '../types.js';
+import { buildSocketPlayersSnapshot } from './players.js';
 
 // apiKey → set of socket ids (one player can have many tabs)
 export const sockets = new Map<string, Set<string>>();
@@ -42,7 +43,7 @@ export function registerSocketHandlers(io: Server, engine: Engine): void {
       yourBet: yourBet
         ? { amount: yourBet.amount, autoCashOutAt: yourBet.autoCashOutAt, status: yourBetStatus }
         : null,
-      players: [...state.publicPlayers.values()],
+      players: buildSocketPlayersSnapshot(sockets, state.publicPlayers.values()),
     };
     socket.emit('round:state', snapshot);
 

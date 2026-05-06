@@ -220,6 +220,16 @@ describe('Engine', () => {
     expect(m2).toBeGreaterThan(m1);
   });
 
+  it('engine publicPlayers only tracks current-round bet participants', async () => {
+    await engine.placeBet('alice', 100, null);
+
+    expect(engine.getState().publicPlayers.has('alice')).toBe(true);
+    expect(engine.getState().publicPlayers.has('bob')).toBe(false);
+    expect([...engine.getState().publicPlayers.values()]).toEqual([
+      { username: 'alice', amount: 100, status: 'placed', multiplier: null },
+    ]);
+  });
+
   it('publicPlayers is cleared on advanceToWaiting', async () => {
     await engine.placeBet('alice', 100, null);
     expect(engine.getState().publicPlayers.size).toBe(1);

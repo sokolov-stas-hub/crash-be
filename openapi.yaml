@@ -19,7 +19,7 @@ info:
     | Event | Payload |
     |---|---|
     | `round:state` | `{ phase, roundId, startedAt, endsAt, currentMultiplier, crashPoint, yourBet, players }` |
-    | `round:waiting` | `{ roundId, endsAt, players: [] }` |
+    | `round:waiting` | `{ roundId, endsAt, players }` |
     | `round:start` | `{ roundId, startedAt, players }` |
     | `round:tick` | `{ roundId, multiplier, elapsedMs }` |
     | `round:crash` | `{ roundId, crashPoint, tier, players }` |
@@ -31,7 +31,10 @@ info:
     | `players:cashout` | `{ username, multiplier, winAmount }` (broadcast) |
     | `players:lost` | `{ username, amount }` (broadcast) |
 
-    players arrays contain PublicPlayer objects (see schemas).
+    `players` arrays contain all currently connected authenticated users plus
+    current-round bettor outcomes. Connected users without a bet appear as
+    `{ username, amount: 0, status: 'watching', multiplier: null }`.
+    Crash generation targets roughly 92% RTP.
 
     ### Client → Server
 
@@ -82,11 +85,18 @@ components:
 
     PublicPlayer:
       type: object
+      required: [username, amount, status, multiplier]
       properties:
         username: { type: string, description: 'Same as the player apiKey' }
         amount: { type: number }
-        status: { type: string, enum: [placed, cashed_out, lost] }
-        multiplier: { type: number, nullable: true, description: 'Set only when status=cashed_out' }
+        status:
+          type: string
+          enum:
+            - watching
+            - placed
+            - cashed_out
+            - lost
+        multiplier: { type: number, nullable: true, description: 'Set when status=cashed_out; null for watching, placed, and lost' }
 
     RecentRound:
       type: object

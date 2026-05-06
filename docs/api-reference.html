@@ -337,6 +337,7 @@
   ]
 }</pre>
     <p><code>tier</code>: <code>'low'</code> (red, &lt; 1.5×) | <code>'mid'</code> (orange, 1.5–3×) | <code>'high'</code> (green, ≥ 3×). Класифікація на сервері — фронт не реіменує.</p>
+    <p>Crash generation targets roughly 92% RTP while keeping the same heavy-tail multiplier shape.</p>
 
     <h4>Приклад (initial load + live append через Zustand):</h4>
     <pre><span class="c">// src/stores/recent.ts (Zustand)</span>
@@ -428,7 +429,7 @@ useEffect(() =&gt; {
     <pre><span class="kw">interface</span> <span class="t">RoundWaitingEvent</span> {
   <span class="k">roundId</span>: <span class="t">string</span>;
   <span class="k">endsAt</span>: <span class="t">string</span>;
-  <span class="k">players</span>: [];                         <span class="c">// always empty (новий раунд, лист скинуто)</span>
+  <span class="k">players</span>: <span class="t">PublicPlayer</span>[];
 }</pre>
 
     <h4>Приклад (з countdown):</h4>
@@ -438,6 +439,7 @@ useEffect(() =&gt; {
   useGameStore.getState().setEndsAt(<span class="kw">new</span> <span class="t">Date</span>(e.endsAt));
   useGameStore.getState().setMultiplier(<span class="n">1.0</span>);
   useGameStore.getState().setMyBet(<span class="kw">null</span>);
+  useGameStore.getState().setPlayers(e.players);
 });
 
 <span class="c">// у компоненті:</span>
@@ -545,6 +547,7 @@ useEffect(() =&gt; {
   useGameStore.getState().setPhase(<span class="str">'crashed'</span>);
   useGameStore.getState().setMultiplier(e.crashPoint);
   useGameStore.getState().setCrashPoint(e.crashPoint);
+  useGameStore.getState().setPlayers(e.players);
   <span class="c">// Прелогінити recent rounds:</span>
   useRecentStore.getState().prepend({ <span class="k">roundId</span>: e.roundId, <span class="k">crashPoint</span>: e.crashPoint });
   <span class="c">// Тригер crash-flash анімації:</span>
@@ -676,9 +679,10 @@ useEffect(() =&gt; {
   <pre><span class="kw">interface</span> <span class="t">PublicPlayer</span> {
   <span class="k">username</span>: <span class="t">string</span>;            <span class="c">// === apiKey</span>
   <span class="k">amount</span>: <span class="t">number</span>;
-  <span class="k">status</span>: <span class="str">'placed'</span> | <span class="str">'cashed_out'</span> | <span class="str">'lost'</span>;
+  <span class="k">status</span>: <span class="str">'watching'</span> | <span class="str">'placed'</span> | <span class="str">'cashed_out'</span> | <span class="str">'lost'</span>;
   <span class="k">multiplier</span>: <span class="t">number</span> | <span class="kw">null</span>;   <span class="c">// тільки при cashed_out</span>
 }</pre>
+  <p><code>players</code> arrays include currently connected authenticated users plus current-round bettor outcomes. Connected users without a bet in the current round appear with <code>status: 'watching'</code>, <code>amount: 0</code>, and <code>multiplier: null</code>. Historical/offline non-bettors are not included.</p>
 
   <div class="endpoint">
     <div class="endpoint-head">
@@ -837,7 +841,7 @@ useEffect(() =&gt; {
 
   <pre><span class="c">// ═══ Що приходить → куди в Zustand ═══</span>
 <span class="str">'round:state'</span>   →  повний reset стейту з snapshot (з players)
-<span class="str">'round:waiting'</span> →  phase=<span class="str">'waiting'</span>, endsAt, players=[]
+<span class="str">'round:waiting'</span> →  phase=<span class="str">'waiting'</span>, endsAt, players snapshot
 <span class="str">'round:start'</span>   →  phase=<span class="str">'running'</span>, startedAt, players snapshot
 <span class="str">'round:tick'</span>    →  multiplier (5Hz)
 <span class="str">'round:crash'</span>   →  phase=<span class="str">'crashed'</span>, crashPoint, tier, players

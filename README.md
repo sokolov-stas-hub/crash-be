@@ -5,6 +5,7 @@ Multi-tenant via the `X-API-Key` header (any non-empty string is a
 valid identifier; first sighting auto-creates a player with starting
 balance 10,000). Server is the source of truth for phase, multiplier,
 and bet outcomes.
+Crash generation targets roughly 92% RTP using the same heavy-tail crash shape.
 
 ## Stack
 
@@ -22,6 +23,10 @@ TypeScript · Express · Socket.IO · Postgres (`pg`) · zod · Vitest ·
 
 WebSocket: `socket.io-client` with `auth: { apiKey: '<your-key>' }`.
 Full event reference at `/api/docs` → "WebSocket events" section.
+`players` arrays contain currently connected authenticated users plus current-round
+bettor outcomes. Connected users without a current-round bet use
+`status: 'watching'`, `amount: 0`, and `multiplier: null`. Historical/offline
+non-bettors are not included.
 
 ## Local development
 

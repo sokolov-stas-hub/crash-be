@@ -122,6 +122,15 @@ export interface BalanceResponse {
   balance: number;
 }
 
+export interface BonusClaimResponse {
+  claimed: boolean;
+  amount: number;
+  balance: number;
+  claimedAt: string;
+  nextClaimAt: string;
+  retryAfterMs: number;
+}
+
 export interface RecentRound {
   roundId: string;
   crashPoint: number;

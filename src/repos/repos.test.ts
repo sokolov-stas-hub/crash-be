@@ -4,6 +4,7 @@ import { pool } from '../db.js';
 import * as playerRepo from './playerRepo.js';
 import * as roundRepo from './roundRepo.js';
 import * as betRepo from './betRepo.js';
+import * as bonusRepo from './bonusRepo.js';
 
 beforeAll(async () => {
   // Sanity: ensure the schema exists. Run `npm run migrate` first.
@@ -185,4 +186,55 @@ describe('betRepo', () => {
     expect(r.rowCount).toBe(0);
   });
 
+});
+
+describe('bonusRepo', () => {
+  it('claimBonus credits 100 coins and records the claim window', async () => {
+    await playerRepo.ensureExists('kate');
+
+    const claim = await bonusRepo.claimBonus('kate', new Date('2026-05-12T10:00:00.000Z'));
+
+    expect(claim).toMatchObject({
+      claimed: true,
+      amount: 100,
+      balance: 10_100,
+      retryAfterMs: 0,
+    });
+    expect(claim.claimedAt.toISOString()).toBe('2026-05-12T10:00:00.000Z');
+    expect(claim.nextClaimAt.toISOString()).toBe('2026-05-12T10:10:00.000Z');
+    expect(await playerRepo.getBalance('kate')).toBe(10_100);
+  });
+
+  it('claimBonus rejects another claim inside the 10 minute cooldown', async () => {
+    await playerRepo.ensureExists('liam');
+    await bonusRepo.claimBonus('liam', new Date('2026-05-12T10:00:00.000Z'));
+
+    const claim = await bonusRepo.claimBonus('liam', new Date('2026-05-12T10:08:00.000Z'));
+
+    expect(claim).toMatchObject({
+      claimed: false,
+      amount: 100,
+      balance: 10_100,
+      retryAfterMs: 120_000,
+    });
+    expect(claim.claimedAt.toISOString()).toBe('2026-05-12T10:00:00.000Z');
+    expect(claim.nextClaimAt.toISOString()).toBe('2026-05-12T10:10:00.000Z');
+    expect(await playerRepo.getBalance('liam')).toBe(10_100);
+  });
+
+  it('claimBonus allows another claim after the 10 minute cooldown expires', async () => {
+    await playerRepo.ensureExists('maya');
+    await bonusRepo.claimBonus('maya', new Date('2026-05-12T10:00:00.000Z'));
+
+    const claim = await bonusRepo.claimBonus('maya', new Date('2026-05-12T10:10:00.000Z'));
+
+    expect(claim).toMatchObject({
+      claimed: true,
+      amount: 100,
+      balance: 10_200,
+      retryAfterMs: 0,
+    });
+    expect(claim.nextClaimAt.toISOString()).toBe('2026-05-12T10:20:00.000Z');
+    expect(await playerRepo.getBalance('maya')).toBe(10_200);
+  });
 });

@@ -54,6 +54,7 @@ servers:
 tags:
   - name: System
   - name: Player
+  - name: Bonus
   - name: Round
 
 components:
@@ -75,6 +76,17 @@ components:
       required: [balance]
       properties:
         balance: { type: number }
+
+    BonusClaim:
+      type: object
+      required: [claimed, amount, balance, claimedAt, nextClaimAt, retryAfterMs]
+      properties:
+        claimed: { type: boolean }
+        amount: { type: number, example: 100 }
+        balance: { type: number }
+        claimedAt: { type: string, format: date-time }
+        nextClaimAt: { type: string, format: date-time }
+        retryAfterMs: { type: integer, minimum: 0 }
 
     RoundTier:
       type: string
@@ -136,6 +148,29 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Balance' }
+
+  /api/bonus/claim:
+    post:
+      tags: [Bonus]
+      summary: Claim a 100 coin bonus once every 10 minutes
+      security: [{ ApiKey: [] }]
+      responses:
+        '200':
+          description: Bonus claimed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BonusClaim' }
+        '429':
+          description: Bonus is still on cooldown
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BonusClaim'
+                  - type: object
+                    required: [error]
+                    properties:
+                      error: { type: string }
 
   /api/rounds/recent:
     get:

@@ -4,6 +4,7 @@ import { errorHandler } from './middleware/errors.js';
 import { apiKeyMiddleware } from './middleware/apiKey.js';
 import { balanceRouter } from './routes/balance.js';
 import { recentRouter } from './routes/recent.js';
+import { bonusRouter } from './routes/bonus.js';
 import { docsRouter } from './routes/docs.js';
 
 export function createApp() {
@@ -21,6 +22,7 @@ export function createApp() {
   // Auth-required routes
   app.use('/api', apiKeyMiddleware);
   app.use('/api', balanceRouter);
+  app.use('/api', bonusRouter);
   app.use('/api', recentRouter);
 
   app.use(errorHandler);
